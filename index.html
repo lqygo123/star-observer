@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>太阳系星图观测器</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: #000;
+            color: #fff;
+            overflow: hidden;
+        }
+        
+        #container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        #ui-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            z-index: 100;
+            max-width: 300px;
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #ccc;
+            font-size: 14px;
+        }
+        
+        .control-group input[type="range"] {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        
+        .control-group input[type="date"] {
+            width: 100%;
+            padding: 5px;
+            border: 1px solid #555;
+            background: #222;
+            color: #fff;
+            border-radius: 3px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background-color 0.3s;
+        }
+        
+        .btn-primary {
+            background: #0066cc;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #0052a3;
+        }
+        
+        .btn-secondary {
+            background: #666;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #555;
+        }
+        
+        #info-panel {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #333;
+            z-index: 100;
+            max-width: 350px;
+        }
+        
+        .planet-info {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 12px;
+        }
+        
+        .planet-name {
+            color: #ffd700;
+        }
+        
+        .constellation-name {
+            color: #87ceeb;
+        }
+        
+        #loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #fff;
+            font-size: 18px;
+            z-index: 200;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="loading">正在加载天体数据...</div>
+        
+        <div id="ui-panel">
+            <h3 style="margin-bottom: 15px; color: #ffd700;">太阳系星图观测器</h3>
+            
+            <div class="control-group">
+                <label for="date-input">观测日期:</label>
+                <input type="date" id="date-input" value="2024-01-01">
+            </div>
+            
+            <div class="control-group">
+                <label for="time-speed">时间速度 (天/秒):</label>
+                <input type="range" id="time-speed" min="0" max="100" value="1" step="0.1">
+                <span id="speed-value">1</span>
+            </div>
+            
+            <div class="control-group">
+                <label for="planet-focus">聚焦行星:</label>
+                <select id="planet-focus" style="width: 100%; padding: 5px; background: #222; color: #fff; border: 1px solid #555;">
+                    <option value="all">全部显示</option>
+                    <option value="mercury">水星</option>
+                    <option value="venus">金星</option>
+                    <option value="mars">火星</option>
+                    <option value="jupiter">木星</option>
+                    <option value="saturn">土星</option>
+                </select>
+            </div>
+            
+            <div class="button-group">
+                <button id="play-pause" class="btn btn-primary">播放</button>
+                <button id="reset" class="btn btn-secondary">重置</button>
+            </div>
+            
+            <div class="control-group" style="margin-top: 15px;">
+                <label>
+                    <input type="checkbox" id="show-constellations" checked> 显示星座
+                </label>
+                <label>
+                    <input type="checkbox" id="show-planet-orbits" checked> 显示行星轨迹
+                </label>
+                <label>
+                    <input type="checkbox" id="show-ecliptic"> 显示黄道
+                </label>
+            </div>
+        </div>
+        
+        <div id="info-panel">
+            <h4 style="margin-bottom: 10px; color: #ffd700;">当前观测信息</h4>
+            <div id="current-date"></div>
+            <div id="planet-positions"></div>
+        </div>
+    </div>
+    
+    <script type="module" src="/src/main.js"></script>
+</body>
+</html>

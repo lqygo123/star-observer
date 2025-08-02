@@ -1,0 +1,21 @@
+{
+  "name": "solar-system-starmap",
+  "version": "1.0.0",
+  "description": "太阳系行星观测星图模拟器 - 从地球视角观察行星在星座背景下的位置变化",
+  "main": "index.html",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "^0.158.0",
+    "dat.gui": "^0.7.9"
+  },
+  "devDependencies": {
+    "vite": "^4.5.0"
+  },
+  "keywords": ["astronomy", "solar-system", "three.js", "starmap", "planets", "constellation"],
+  "author": "Your Name",
+  "license": "MIT"
+}
