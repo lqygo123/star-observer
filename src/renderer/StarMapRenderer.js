@@ -451,6 +451,8 @@ export class StarMapRenderer {
             const centerPos = this.calculateConstellationCenter(constellation.stars);
             if (centerPos) {
                 const constellationLabel = this.createTextSprite(constellation.name, '#4a90e2');
+                // 放大星座名称标签（由2倍提升到10倍）
+                constellationLabel.scale.multiplyScalar(10.0);
                 constellationLabel.position.set(centerPos.x, centerPos.y + 30, centerPos.z);
                 constellationLabel.userData = { type: 'constellation_label', constellationName: constellation.name };
                 constellationObject.add(constellationLabel);
@@ -539,6 +541,8 @@ export class StarMapRenderer {
             
             // 添加行星标签
             const labelSprite = this.createTextSprite(planet.name, planet.color);
+            // 放大行星名称标签（由2倍提升到10倍）
+            labelSprite.scale.multiplyScalar(10.0);
             labelSprite.position.set(proj.x, proj.y + 5, proj.z);
             
             // 行星发光效果
