@@ -388,22 +388,39 @@ export class StarMapRenderer {
             constellation.stars.forEach((star, index) => {
                 const starPos = ConstellationData.raDecToCartesian(star.ra, star.dec, this.celestialSphereRadius);
                 
-                // 根据星等调整恒星大小和亮度
-                const starSize = Math.max(1.0, 4 - star.mag);
-                const starGeometry = new THREE.SphereGeometry(starSize, 8, 8);
+                // 根据星等调整恒星大小和亮度（增强效果）
+                const starSize = Math.max(1.5, 6 - star.mag);
+                const starGeometry = new THREE.SphereGeometry(starSize, 12, 12);
                 
-                // 根据星等调整颜色
+                // 根据星等和光谱类型调整颜色（更丰富的颜色）
                 let starColor = 0xffffaa; // 默认黄色
                 if (star.mag <= 0.5) starColor = 0xffffff; // 最亮星为白色
+                else if (star.mag <= 1.0) starColor = 0xfff8dc; // 极亮星为蜜色
                 else if (star.mag <= 1.5) starColor = 0xffffcc; // 亮星为浅黄色
                 else if (star.mag <= 2.5) starColor = 0xffffaa; // 中等星为黄色
-                else starColor = 0xffaa44; // 暗星为橙色
+                else if (star.mag <= 3.5) starColor = 0xffdd77; // 暗星为橙黄色
+                else starColor = 0xffaa44; // 更暗星为橙色
                 
                 const starMaterial = new THREE.MeshBasicMaterial({
                     color: starColor,
                     transparent: true,
-                    opacity: Math.max(0.6, Math.min(1.0, 1.2 - star.mag * 0.2))
+                    opacity: Math.max(0.7, Math.min(1.0, 1.3 - star.mag * 0.2))
                 });
+                
+                // 为亮星添加光晕效果
+                if (star.mag <= 2.0) {
+                    const glowSize = starSize * 2.5;
+                    const glowGeometry = new THREE.SphereGeometry(glowSize, 8, 8);
+                    const glowMaterial = new THREE.MeshBasicMaterial({
+                        color: starColor,
+                        transparent: true,
+                        opacity: 0.1,
+                        blending: THREE.AdditiveBlending
+                    });
+                    const glowMesh = new THREE.Mesh(glowGeometry, glowMaterial);
+                    glowMesh.position.set(starPos.x, starPos.y, starPos.z);
+                    constellationObject.add(glowMesh);
+                }
                 
                 const starMesh = new THREE.Mesh(starGeometry, starMaterial);
                 starMesh.position.set(starPos.x, starPos.y, starPos.z);
@@ -411,10 +428,11 @@ export class StarMapRenderer {
                 
                 constellationObject.add(starMesh);
                 
-                // 为亮星添加名字标注
-                if (star.mag <= 2.0) {
+                // 为亮星添加名字标注（改进样式）
+                if (star.mag <= 2.5) {
                     const labelSprite = this.createTextSprite(star.name, '#ffffff');
-                    labelSprite.position.set(starPos.x + 15, starPos.y, starPos.z);
+                    labelSprite.position.set(starPos.x + 20, starPos.y + 10, starPos.z);
+                    labelSprite.scale.multiplyScalar(1.2); // 略微放大标签
                     labelSprite.userData = { type: 'star_label', starName: star.name };
                     constellationObject.add(labelSprite);
                 }
@@ -435,12 +453,26 @@ export class StarMapRenderer {
                         new THREE.Vector3(endPos.x, endPos.y, endPos.z)
                     ]);
                     
+                    // 改进星座连线效果
                     const lineMaterial = new THREE.LineBasicMaterial({
                         color: 0x4a90e2,
                         transparent: true,
-                        opacity: 0.8,
-                        linewidth: 2
+                        opacity: 0.9,
+                        linewidth: 3
                     });
+                    
+                    // 为重要星座添加双线效果
+                    const importantConstellations = ['ursa_major', 'orion', 'cassiopeia', 'southern_cross', 'leo'];
+                    if (importantConstellations.includes(key)) {
+                        const innerLineMaterial = new THREE.LineBasicMaterial({
+                            color: 0x66aaff,
+                            transparent: true,
+                            opacity: 0.6,
+                            linewidth: 1
+                        });
+                        const innerLine = new THREE.Line(lineGeometry.clone(), innerLineMaterial);
+                        constellationObject.add(innerLine);
+                    }
                     
                     const lineMesh = new THREE.Line(lineGeometry, lineMaterial);
                     constellationObject.add(lineMesh);
@@ -451,12 +483,19 @@ export class StarMapRenderer {
             const centerPos = this.calculateConstellationCenter(constellation.stars);
             if (centerPos) {
                 const constellationLabel = this.createTextSprite(constellation.name, '#4a90e2');
-                // 放大星座名称标签（由2倍提升到10倍）
-                constellationLabel.scale.multiplyScalar(10.0);
-                constellationLabel.position.set(centerPos.x, centerPos.y + 30, centerPos.z);
+                // 放大星座名称标签（由2倍提升到12倍，使其更醒目）
+                constellationLabel.scale.multiplyScalar(12.0);
+                constellationLabel.position.set(centerPos.x, centerPos.y + 40, centerPos.z);
                 constellationLabel.userData = { type: 'constellation_label', constellationName: constellation.name };
                 constellationObject.add(constellationLabel);
             }
+            
+            // 为星座对象添加轻微的动画效果
+            constellationObject.userData = { 
+                type: 'constellation', 
+                name: constellation.name,
+                animationPhase: Math.random() * Math.PI * 2
+            };
             
             constellationObject.visible = this.showConstellations;
             this.constellationGroup.add(constellationObject);
@@ -707,6 +746,41 @@ export class StarMapRenderer {
     }
     
     /**
+     * 调整星座透明度
+     */
+    setConstellationOpacity(opacity) {
+        if (!this.constellationGroup) return;
+        
+        this.constellationGroup.children.forEach(constellation => {
+            constellation.children.forEach(child => {
+                if (child.material && child.material.opacity !== undefined) {
+                    const baseOpacity = child.userData.baseOpacity || child.material.opacity;
+                    child.userData.baseOpacity = baseOpacity;
+                    child.material.opacity = baseOpacity * opacity;
+                }
+            });
+        });
+    }
+    
+    /**
+     * 高亮指定星座
+     */
+    highlightConstellation(constellationName) {
+        if (!this.constellationGroup) return;
+        
+        this.constellationGroup.children.forEach(constellation => {
+            const isTarget = constellation.userData.name === constellationName;
+            const opacity = isTarget ? 1.0 : 0.3;
+            
+            constellation.children.forEach(child => {
+                if (child.material && child.material.opacity !== undefined) {
+                    child.material.opacity = child.material.opacity * opacity;
+                }
+            });
+        });
+    }
+    
+    /**
      * 渲染循环
      */
     render() {
@@ -715,7 +789,37 @@ export class StarMapRenderer {
             this.controls.update();
         }
         
+        // 更新星座动画效果
+        this.updateConstellationAnimations();
+        
         this.renderer.render(this.scene, this.camera);
+    }
+    
+    /**
+     * 更新星座动画效果
+     */
+    updateConstellationAnimations() {
+        if (!this.constellationGroup) return;
+        
+        const time = Date.now() * 0.001; // 转换为秒
+        
+        this.constellationGroup.children.forEach(constellation => {
+            if (constellation.userData && constellation.userData.type === 'constellation') {
+                const phase = constellation.userData.animationPhase || 0;
+                
+                // 轻微的星光闪烁效果
+                constellation.children.forEach(child => {
+                    if (child.material && child.material.opacity !== undefined) {
+                        if (child.userData && child.userData.name) {
+                            // 恒星闪烁效果
+                            const baseOpacity = child.material.opacity;
+                            const flicker = 0.95 + 0.1 * Math.sin(time * 2 + phase);
+                            child.material.opacity = Math.min(1.0, baseOpacity * flicker);
+                        }
+                    }
+                });
+            }
+        });
     }
     
     /**

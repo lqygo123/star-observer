@@ -33,9 +33,13 @@ export class ConstellationData {
                 stars: [
                     { name: 'Hamal', ra: 31.8, dec: 23.5, mag: 2.0 },
                     { name: 'Sheratan', ra: 28.7, dec: 20.8, mag: 2.6 },
-                    { name: 'Mesarthim', ra: 28.4, dec: 19.3, mag: 3.9 }
+                    { name: 'Mesarthim', ra: 28.4, dec: 19.3, mag: 3.9 },
+                    { name: 'Botein', ra: 44.9, dec: 19.7, mag: 4.3 },
+                    { name: '35 Arietis', ra: 41.9, dec: 27.7, mag: 4.7 },
+                    { name: '39 Arietis', ra: 44.1, dec: 29.2, mag: 4.5 },
+                    { name: '33 Arietis', ra: 40.6, dec: 27.0, mag: 5.3 }
                 ],
-                lines: [[0, 1], [1, 2]]
+                lines: [[0, 1], [1, 2], [0, 4], [4, 5], [5, 3], [0, 6]]
             },
             
             'taurus': {
@@ -57,9 +61,13 @@ export class ConstellationData {
                     { name: 'Castor', ra: 113.6, dec: 31.9, mag: 1.6 },
                     { name: 'Pollux', ra: 116.3, dec: 28.0, mag: 1.1 },
                     { name: 'Alhena', ra: 99.4, dec: 16.4, mag: 1.9 },
-                    { name: 'Wasat', ra: 107.8, dec: 22.0, mag: 3.5 }
+                    { name: 'Wasat', ra: 107.8, dec: 22.0, mag: 3.5 },
+                    { name: 'Mebsuta', ra: 95.7, dec: 25.1, mag: 3.0 },
+                    { name: 'Tejat', ra: 93.7, dec: 22.5, mag: 2.9 },
+                    { name: 'Mekbuda', ra: 109.2, dec: 25.0, mag: 3.8 },
+                    { name: 'Propus', ra: 94.3, dec: 22.5, mag: 3.3 }
                 ],
-                lines: [[0, 1], [1, 2], [2, 3], [3, 0]]
+                lines: [[0, 1], [1, 2], [2, 5], [5, 7], [7, 4], [4, 0], [3, 6], [6, 1], [0, 3]]
             },
             
             'cancer': {
@@ -81,9 +89,14 @@ export class ConstellationData {
                     { name: 'Regulus', ra: 152.1, dec: 11.9, mag: 1.4 },
                     { name: 'Denebola', ra: 177.3, dec: 14.6, mag: 2.1 },
                     { name: 'Algieba', ra: 154.9, dec: 19.8, mag: 2.6 },
-                    { name: 'Zosma', ra: 169.6, dec: 20.5, mag: 2.6 }
+                    { name: 'Zosma', ra: 169.6, dec: 20.5, mag: 2.6 },
+                    { name: 'Adhafera', ra: 153.7, dec: 23.4, mag: 3.4 },
+                    { name: 'Chort', ra: 168.6, dec: 15.4, mag: 3.3 },
+                    { name: 'Ras Elased Australis', ra: 148.2, dec: 23.8, mag: 3.9 },
+                    { name: 'Ras Elased Borealis', ra: 148.0, dec: 26.0, mag: 4.0 },
+                    { name: 'Subra', ra: 143.7, dec: 9.9, mag: 3.5 }
                 ],
-                lines: [[0, 2], [2, 3], [3, 1], [1, 0]]
+                lines: [[0, 2], [2, 4], [4, 6], [6, 7], [2, 3], [3, 5], [5, 1], [0, 8]]
             },
             
             'virgo': {
@@ -177,9 +190,15 @@ export class ConstellationData {
                     { name: 'Megrez', ra: 183.9, dec: 57.0, mag: 3.3 },
                     { name: 'Alioth', ra: 193.5, dec: 55.9, mag: 1.8 },
                     { name: 'Mizar', ra: 200.9, dec: 54.9, mag: 2.1 },
-                    { name: 'Alkaid', ra: 206.9, dec: 49.3, mag: 1.9 }
+                    { name: 'Alkaid', ra: 206.9, dec: 49.3, mag: 1.9 },
+                    { name: 'Talitha', ra: 134.8, dec: 48.0, mag: 3.1 },
+                    { name: 'Tania Borealis', ra: 155.6, dec: 41.5, mag: 3.1 },
+                    { name: 'Tania Australis', ra: 154.3, dec: 38.3, mag: 3.1 },
+                    { name: 'Alula Borealis', ra: 169.6, dec: 33.1, mag: 3.5 },
+                    { name: 'Alula Australis', ra: 169.5, dec: 31.5, mag: 3.8 },
+                    { name: 'Muscida', ra: 130.0, dec: 60.7, mag: 3.4 }
                 ],
-                lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6]]
+                lines: [[0, 1], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [0, 12], [1, 8], [8, 9], [2, 10], [10, 11]]
             },
 
             'ursa_minor': {
@@ -204,9 +223,13 @@ export class ConstellationData {
                     { name: 'Mintaka', ra: 83.0, dec: -0.3, mag: 2.2 },
                     { name: 'Alnilam', ra: 84.1, dec: -1.2, mag: 1.7 },
                     { name: 'Alnitak', ra: 85.2, dec: -1.9, mag: 1.9 },
-                    { name: 'Saiph', ra: 86.9, dec: -9.7, mag: 2.1 }
+                    { name: 'Saiph', ra: 86.9, dec: -9.7, mag: 2.1 },
+                    { name: 'Meissa', ra: 83.8, dec: 9.9, mag: 3.4 },
+                    { name: 'Hatysa', ra: 84.7, dec: -2.6, mag: 3.7 },
+                    { name: 'Tabit', ra: 76.6, dec: 6.3, mag: 3.2 },
+                    { name: 'Nair al Saif', ra: 85.4, dec: -5.9, mag: 2.8 }
                 ],
-                lines: [[0, 2], [2, 3], [3, 4], [4, 5], [5, 1], [1, 6], [3, 6]]
+                lines: [[0, 2], [2, 3], [3, 4], [4, 5], [5, 1], [1, 6], [3, 6], [7, 0], [7, 2], [2, 9], [4, 8], [5, 10]]
             },
 
             'canis_major': {
@@ -274,9 +297,56 @@ export class ConstellationData {
                     { name: 'Caph', ra: 2.3, dec: 59.1, mag: 2.3 },
                     { name: 'Cih', ra: 14.2, dec: 60.7, mag: 2.5 },
                     { name: 'Ruchbah', ra: 21.5, dec: 60.2, mag: 2.7 },
-                    { name: 'Segin', ra: 28.6, dec: 63.7, mag: 3.4 }
+                    { name: 'Segin', ra: 28.6, dec: 63.7, mag: 3.4 },
+                    { name: 'Achird', ra: 19.4, dec: 57.8, mag: 3.4 }
                 ],
-                lines: [[0, 1], [1, 2], [2, 3], [3, 4]]
+                lines: [[1, 0], [0, 2], [2, 3], [3, 4], [3, 5]]
+            },
+
+            // 南半球重要星座
+            'southern_cross': {
+                name: '南十字座',
+                english: 'Crux',
+                stars: [
+                    { name: 'Acrux', ra: 186.6, dec: -63.1, mag: 0.8 },
+                    { name: 'Gacrux', ra: 187.8, dec: -57.1, mag: 1.6 },
+                    { name: 'Imai', ra: 183.8, dec: -59.7, mag: 1.3 },
+                    { name: 'Mimosa', ra: 191.9, dec: -59.7, mag: 1.3 },
+                    { name: 'Intrometida', ra: 185.3, dec: -60.4, mag: 4.0 }
+                ],
+                lines: [[0, 1], [1, 3], [3, 2], [2, 0], [4, 1]]
+            },
+
+            'centaurus': {
+                name: '半人马座',
+                english: 'Centaurus',
+                stars: [
+                    { name: 'Rigil Kentaurus', ra: 219.9, dec: -60.8, mag: -0.3 },
+                    { name: 'Hadar', ra: 210.9, dec: -60.4, mag: 0.6 },
+                    { name: 'Menkent', ra: 211.7, dec: -36.4, mag: 2.1 },
+                    { name: 'Alnair', ra: 208.9, dec: -47.3, mag: 2.3 },
+                    { name: 'Muhlifain', ra: 204.9, dec: -53.5, mag: 2.2 },
+                    { name: 'Ma Wei', ra: 173.9, dec: -31.9, mag: 2.9 }
+                ],
+                lines: [[0, 1], [1, 4], [4, 3], [3, 2], [2, 5]]
+            },
+
+            'scorpius_extended': {
+                name: '天蝎座',
+                english: 'Scorpius',
+                stars: [
+                    { name: 'Antares', ra: 247.4, dec: -26.4, mag: 1.1 },
+                    { name: 'Shaula', ra: 263.4, dec: -37.1, mag: 1.6 },
+                    { name: 'Sargas', ra: 264.3, dec: -43.0, mag: 1.9 },
+                    { name: 'Dschubba', ra: 240.1, dec: -22.6, mag: 2.3 },
+                    { name: 'Larawag', ra: 262.7, dec: -37.0, mag: 2.7 },
+                    { name: 'Lesath', ra: 262.6, dec: -37.3, mag: 2.7 },
+                    { name: 'Wei', ra: 239.7, dec: -26.1, mag: 2.9 },
+                    { name: 'Acrab', ra: 241.4, dec: -19.8, mag: 2.6 },
+                    { name: 'Fang', ra: 245.3, dec: -25.6, mag: 2.9 },
+                    { name: 'Iklil', ra: 239.2, dec: -28.2, mag: 3.0 }
+                ],
+                lines: [[3, 7], [7, 0], [0, 8], [8, 6], [6, 9], [0, 4], [4, 5], [5, 1], [1, 2]]
             }
         };
         
