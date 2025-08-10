@@ -11,6 +11,7 @@ export class UIController {
             speedValue: document.getElementById('speed-value'),
             planetFocus: document.getElementById('planet-focus'),
             observerLocation: document.getElementById('observer-location'),
+            fixedTime: document.getElementById('fixed-time'),
             playPause: document.getElementById('play-pause'),
             reset: document.getElementById('reset'),
             showConstellations: document.getElementById('show-constellations'),
@@ -41,6 +42,14 @@ export class UIController {
             this.elements.dateInput.addEventListener('change', (event) => {
                 const date = new Date(event.target.value + 'T12:00:00');
                 this.emit('dateChange', date);
+            });
+        }
+
+        // 固定时间变化
+        if (this.elements.fixedTime) {
+            this.elements.fixedTime.addEventListener('change', (event) => {
+                const time = event.target.value; // HH:MM
+                this.emit('fixedTimeChange', time);
             });
         }
         

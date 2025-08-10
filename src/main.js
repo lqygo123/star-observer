@@ -22,6 +22,7 @@ class SolarSystemStarMap {
         // 状态管理
         this.isInitialized = false;
         this.animationId = null;
+        this.fixedObservationTime = '00:00'; // HH:MM
     }
     
     /**
@@ -119,6 +120,14 @@ class SolarSystemStarMap {
             this.updateStarMap(date);
         });
 
+        // 固定观测时间
+        this.uiController.on('fixedTimeChange', (hhmm) => {
+            this.fixedObservationTime = hhmm || '00:00';
+            // 切到当前日期的该时间点重算
+            const curr = this.timeController.getCurrentDate();
+            this.updateStarMap(curr);
+        });
+
         // 显示选项变化
         this.uiController.on('showConstellationsChange', (show) => {
             this.renderer.setConstellationsVisible(show);
@@ -145,15 +154,22 @@ class SolarSystemStarMap {
     updateStarMap(date) {
         if (!this.isInitialized) return;
         
-        // 计算当前日期所有行星的位置
-        const planetPositions = this.calculator.calculatePlanetPositions(date);
+        // 将日期时间固定为指定HH:MM
+        const effectiveDate = new Date(date);
+        if (typeof this.fixedObservationTime === 'string') {
+            const [hh, mm] = this.fixedObservationTime.split(':').map(Number);
+            effectiveDate.setHours(Number.isFinite(hh) ? hh : 0, Number.isFinite(mm) ? mm : 0, 0, 0);
+        }
+
+        // 计算当前日期所有行星的位置（使用固定时间）
+        const planetPositions = this.calculator.calculatePlanetPositions(effectiveDate);
         
         // 更新3D场景
         this.renderer.updatePlanetPositions(planetPositions);
-        this.renderer.updateStarField(date);
+        this.renderer.updateStarField(effectiveDate);
         
         // 更新UI信息显示
-        this.uiController.updateDateDisplay(date);
+        this.uiController.updateDateDisplay(effectiveDate);
         this.uiController.updatePlanetInfo(planetPositions);
     }
     
