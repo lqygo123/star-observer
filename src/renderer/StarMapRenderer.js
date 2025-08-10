@@ -45,7 +45,7 @@ export class StarMapRenderer {
         console.log('StarMapRenderer: 开始初始化渲染器');
         // 创建场景
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0x000011);
+        this.scene.background = new THREE.Color(0x001122);
         console.log('StarMapRenderer: 场景创建完成');
         
         // 创建相机
@@ -79,6 +79,11 @@ export class StarMapRenderer {
         console.log('StarMapRenderer: 开始创建星空背景');
         await this.createBackgroundStars();
         console.log('StarMapRenderer: 星空背景创建完成');
+        
+        // 创建重要亮星标注
+        console.log('StarMapRenderer: 开始创建重要亮星标注');
+        this.createBrightStarLabels();
+        console.log('StarMapRenderer: 重要亮星标注创建完成');
         
         // 创建黄道平面
         console.log('StarMapRenderer: 开始创建黄道平面');
@@ -257,8 +262,13 @@ export class StarMapRenderer {
                 ? this.bvToRgb(star.bv)
                 : { r: 1, g: 1, b: 1 };
 
-            // 亮度：依据星等缩放颜色强度（保持0..1范围内）
-            const intensity = Math.min(1, Math.max(0.05, Math.pow(2.512, -star.mag)));
+            // 亮度：依据星等缩放颜色强度（增强亮度，让恒星更明显）
+            // 对亮星（低星等）给予更高亮度，暗星（高星等）给予基础亮度
+            const baseIntensity = Math.pow(2.512, -star.mag);
+            const enhancedIntensity = star.mag <= 2.0 ? baseIntensity * 4.0 : 
+                                    star.mag <= 4.0 ? baseIntensity * 3.0 : 
+                                    baseIntensity * 2.0;
+            const intensity = Math.min(1, Math.max(0.3, enhancedIntensity));
             colors[i * 3] = rgb.r * intensity;
             colors[i * 3 + 1] = rgb.g * intensity;
             colors[i * 3 + 2] = rgb.b * intensity;
@@ -270,11 +280,11 @@ export class StarMapRenderer {
         // 清空旧背景并添加新的点云
         this.starField.clear();
         const starMaterial = new THREE.PointsMaterial({
-            size: 1.6,
+            size: 2.5,
             sizeAttenuation: true,
             vertexColors: true,
             transparent: true,
-            opacity: 0.95
+            opacity: 1.0
         });
 
         const starsPoints = new THREE.Points(starGeometry, starMaterial);
@@ -354,18 +364,36 @@ export class StarMapRenderer {
             constellation.stars.forEach((star, index) => {
                 const starPos = ConstellationData.raDecToCartesian(star.ra, star.dec, this.celestialSphereRadius);
                 
-                const starGeometry = new THREE.SphereGeometry(ConstellationData.magnitudeToSize(star.mag), 8, 8);
+                // 根据星等调整恒星大小和亮度
+                const starSize = Math.max(1.0, 4 - star.mag);
+                const starGeometry = new THREE.SphereGeometry(starSize, 8, 8);
+                
+                // 根据星等调整颜色
+                let starColor = 0xffffaa; // 默认黄色
+                if (star.mag <= 0.5) starColor = 0xffffff; // 最亮星为白色
+                else if (star.mag <= 1.5) starColor = 0xffffcc; // 亮星为浅黄色
+                else if (star.mag <= 2.5) starColor = 0xffffaa; // 中等星为黄色
+                else starColor = 0xffaa44; // 暗星为橙色
+                
                 const starMaterial = new THREE.MeshBasicMaterial({
-                    color: 0xffffaa,
+                    color: starColor,
                     transparent: true,
-                    opacity: ConstellationData.magnitudeToIntensity(star.mag)
+                    opacity: Math.max(0.6, Math.min(1.0, 1.2 - star.mag * 0.2))
                 });
                 
                 const starMesh = new THREE.Mesh(starGeometry, starMaterial);
                 starMesh.position.set(starPos.x, starPos.y, starPos.z);
-                starMesh.userData = { name: star.name, magnitude: star.mag };
+                starMesh.userData = { name: star.name, magnitude: star.mag, constellation: constellation.name };
                 
                 constellationObject.add(starMesh);
+                
+                // 为亮星添加名字标注
+                if (star.mag <= 2.0) {
+                    const labelSprite = this.createTextSprite(star.name, '#ffffff');
+                    labelSprite.position.set(starPos.x + 15, starPos.y, starPos.z);
+                    labelSprite.userData = { type: 'star_label', starName: star.name };
+                    constellationObject.add(labelSprite);
+                }
             });
             
             // 创建星座连线
@@ -386,7 +414,8 @@ export class StarMapRenderer {
                     const lineMaterial = new THREE.LineBasicMaterial({
                         color: 0x4a90e2,
                         transparent: true,
-                        opacity: 0.6
+                        opacity: 0.8,
+                        linewidth: 2
                     });
                     
                     const lineMesh = new THREE.Line(lineGeometry, lineMaterial);
@@ -394,10 +423,62 @@ export class StarMapRenderer {
                 });
             }
             
+            // 添加星座名字标注（在星座中心位置）
+            const centerPos = this.calculateConstellationCenter(constellation.stars);
+            if (centerPos) {
+                const constellationLabel = this.createTextSprite(constellation.name, '#4a90e2');
+                constellationLabel.position.set(centerPos.x, centerPos.y + 30, centerPos.z);
+                constellationLabel.userData = { type: 'constellation_label', constellationName: constellation.name };
+                constellationObject.add(constellationLabel);
+            }
+            
             constellationObject.visible = this.showConstellations;
             this.constellationGroup.add(constellationObject);
         }
         console.log('StarMapRenderer: 星座图案创建完成');
+    }
+    
+    /**
+     * 计算星座中心位置
+     */
+    calculateConstellationCenter(stars) {
+        if (stars.length === 0) return null;
+        
+        let sumX = 0, sumY = 0, sumZ = 0;
+        stars.forEach(star => {
+            const pos = ConstellationData.raDecToCartesian(star.ra, star.dec, this.celestialSphereRadius);
+            sumX += pos.x;
+            sumY += pos.y;
+            sumZ += pos.z;
+        });
+        
+        return {
+            x: sumX / stars.length,
+            y: sumY / stars.length,
+            z: sumZ / stars.length
+        };
+    }
+    
+    /**
+     * 创建重要亮星标注
+     */
+    createBrightStarLabels() {
+        if (!this.constellationData) return;
+        
+        const brightStars = this.constellationData.getBrightStars();
+        console.log(`StarMapRenderer: 为${brightStars.size}颗重要亮星创建标注`);
+        
+        brightStars.forEach((star, starName) => {
+            const starPos = ConstellationData.raDecToCartesian(star.ra, star.dec, this.celestialSphereRadius);
+            
+            // 创建亮星标注（只标注最亮的星）
+            if (star.mag <= 1.0) {
+                const labelSprite = this.createTextSprite(starName, '#ffff00');
+                labelSprite.position.set(starPos.x + 20, starPos.y, starPos.z);
+                labelSprite.userData = { type: 'bright_star_label', starName: starName };
+                this.constellationGroup.add(labelSprite);
+            }
+        });
     }
     
     /**
@@ -468,18 +549,36 @@ export class StarMapRenderer {
         console.log(`StarMapRenderer: 创建文字精灵 "${text}"`);
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
-        canvas.width = 256;
-        canvas.height = 64;
+        canvas.width = 512;
+        canvas.height = 128;
         
+        // 设置背景（半透明黑色）
+        context.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        context.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // 设置文字样式
         context.fillStyle = color;
-        context.font = '24px Arial';
+        context.font = 'bold 32px Arial, sans-serif';
         context.textAlign = 'center';
-        context.fillText(text, 128, 40);
+        context.textBaseline = 'middle';
+        
+        // 添加文字阴影效果
+        context.shadowColor = 'rgba(0, 0, 0, 0.8)';
+        context.shadowBlur = 4;
+        context.shadowOffsetX = 2;
+        context.shadowOffsetY = 2;
+        
+        // 绘制文字
+        context.fillText(text, canvas.width / 2, canvas.height / 2);
         
         const texture = new THREE.CanvasTexture(canvas);
-        const material = new THREE.SpriteMaterial({ map: texture, transparent: true });
+        const material = new THREE.SpriteMaterial({ 
+            map: texture, 
+            transparent: true,
+            alphaTest: 0.1
+        });
         const sprite = new THREE.Sprite(material);
-        sprite.scale.set(20, 5, 1);
+        sprite.scale.set(30, 7.5, 1);
         
         return sprite;
     }
