@@ -7,6 +7,7 @@ import { ConstellationData } from '../data/ConstellationData.js';
  */
 export class StarMapRenderer {
     constructor(container) {
+        console.log('StarMapRenderer: 构造函数被调用');
         this.container = container;
         
         // Three.js核心组件
@@ -41,9 +42,11 @@ export class StarMapRenderer {
      * 初始化渲染器
      */
     async init() {
+        console.log('StarMapRenderer: 开始初始化渲染器');
         // 创建场景
         this.scene = new THREE.Scene();
         this.scene.background = new THREE.Color(0x000011);
+        console.log('StarMapRenderer: 场景创建完成');
         
         // 创建相机
         this.camera = new THREE.PerspectiveCamera(
@@ -53,27 +56,38 @@ export class StarMapRenderer {
             5000
         );
         this.camera.position.set(0, 0, 100);
+        console.log('StarMapRenderer: 相机创建完成');
         
         // 创建渲染器
         this.renderer = new THREE.WebGLRenderer({ antialias: true });
         this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.container.appendChild(this.renderer.domElement);
+        console.log('StarMapRenderer: 渲染器创建完成');
         
         // 创建轨道控制器
+        console.log('StarMapRenderer: 开始初始化轨道控制器');
         await this.initControls();
+        console.log('StarMapRenderer: 轨道控制器初始化完成');
         
         // 创建场景对象组
+        console.log('StarMapRenderer: 开始创建场景对象组');
         this.createSceneGroups();
+        console.log('StarMapRenderer: 场景对象组创建完成');
         
-        // 创建星空背景
-        this.createStarField();
+        // 创建星空背景（优先加载真实星表，失败则回退随机分布）
+        console.log('StarMapRenderer: 开始创建星空背景');
+        await this.createBackgroundStars();
+        console.log('StarMapRenderer: 星空背景创建完成');
         
         // 创建黄道平面
+        console.log('StarMapRenderer: 开始创建黄道平面');
         this.createEcliptic();
+        console.log('StarMapRenderer: 黄道平面创建完成');
         
         // 窗口resize处理
         this.setupResizeHandler();
+        console.log('StarMapRenderer: 窗口resize处理设置完成');
         
         console.log('3D渲染器初始化完成');
     }
@@ -83,6 +97,7 @@ export class StarMapRenderer {
      */
     async initControls() {
         try {
+            console.log('StarMapRenderer: 正在加载OrbitControls模块');
             const { OrbitControls } = await import('three/examples/jsm/controls/OrbitControls.js');
             this.controls = new OrbitControls(this.camera, this.renderer.domElement);
             this.controls.enableDamping = true;
@@ -91,8 +106,9 @@ export class StarMapRenderer {
             this.controls.enablePan = true;
             this.controls.maxDistance = 2000;
             this.controls.minDistance = 10;
+            console.log('StarMapRenderer: OrbitControls初始化成功');
         } catch (error) {
-            console.warn('无法加载OrbitControls，使用基础相机控制');
+            console.warn('无法加载OrbitControls，使用基础相机控制', error);
         }
     }
     
@@ -100,6 +116,7 @@ export class StarMapRenderer {
      * 创建场景对象组
      */
     createSceneGroups() {
+        console.log('StarMapRenderer: 创建场景对象组');
         this.starField = new THREE.Group();
         this.constellationGroup = new THREE.Group();
         this.planetGroup = new THREE.Group();
@@ -109,13 +126,16 @@ export class StarMapRenderer {
         this.scene.add(this.constellationGroup);
         this.scene.add(this.planetGroup);
         this.scene.add(this.orbitTrailsGroup);
+        console.log('StarMapRenderer: 场景对象组添加到场景中');
     }
     
     /**
      * 创建星空背景
      */
     createStarField() {
+        console.log('StarMapRenderer: 开始创建星空背景');
         const starCount = 2000;
+        console.log(`StarMapRenderer: 准备创建${starCount}颗恒星`);
         const starGeometry = new THREE.BufferGeometry();
         const starPositions = new Float32Array(starCount * 3);
         const starColors = new Float32Array(starCount * 3);
@@ -171,28 +191,163 @@ export class StarMapRenderer {
         
         const stars = new THREE.Points(starGeometry, starMaterial);
         this.starField.add(stars);
+        console.log('StarMapRenderer: 星空背景创建完成');
+    }
+
+    /**
+     * 优先从真实星表创建星空背景，失败时回退到随机分布
+     */
+    async createBackgroundStars() {
+        try {
+            // 默认尝试加载 HYG/HiP 子集（可在部署时将数据放在 public/data/ 下）
+            // 数据格式期望：[{ ra: number(deg), dec: number(deg), mag: number, bv?: number }]
+            await this.loadStarCatalog({
+                url: './data/hyg_v3_mag6.json',
+                maxMagnitude: 6.5,
+                limit: 20000
+            });
+        } catch (error) {
+            console.warn('StarMapRenderer: 加载真实星表失败，改用随机星空。错误：', error);
+            this.createStarField();
+        }
+    }
+
+    /**
+     * 从星表加载并渲染背景星空
+     * @param {{ url: string, maxMagnitude?: number, limit?: number }} options
+     */
+    async loadStarCatalog(options) {
+        const { url, maxMagnitude = 6.5, limit = 20000 } = options || {};
+        if (!url) throw new Error('缺少星表数据URL');
+
+        console.log(`StarMapRenderer: 开始加载星表 ${url}`);
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`星表请求失败：${response.status} ${response.statusText}`);
+        }
+        const stars = await response.json();
+        if (!Array.isArray(stars)) {
+            throw new Error('星表格式错误：期望为数组');
+        }
+
+        // 过滤与裁剪
+        const filtered = stars
+            .filter(s => Number.isFinite(s.ra) && Number.isFinite(s.dec) && Number.isFinite(s.mag))
+            .filter(s => s.mag <= maxMagnitude)
+            .sort((a, b) => a.mag - b.mag);
+
+        const sliced = filtered.slice(0, limit);
+        console.log(`StarMapRenderer: 星表加载完成，原始=${stars.length}，可见=${filtered.length}，绘制=${sliced.length}`);
+
+        // 构建几何
+        const starGeometry = new THREE.BufferGeometry();
+        const starCount = sliced.length;
+        const positions = new Float32Array(starCount * 3);
+        const colors = new Float32Array(starCount * 3);
+
+        for (let i = 0; i < starCount; i++) {
+            const star = sliced[i];
+            const pos = ConstellationData.raDecToCartesian(star.ra, star.dec, this.celestialSphereRadius);
+            positions[i * 3] = pos.x;
+            positions[i * 3 + 1] = pos.y;
+            positions[i * 3 + 2] = pos.z;
+
+            // 颜色：优先使用 B-V 估算色温到RGB；否则按亮度映射白光
+            const rgb = Number.isFinite(star.bv)
+                ? this.bvToRgb(star.bv)
+                : { r: 1, g: 1, b: 1 };
+
+            // 亮度：依据星等缩放颜色强度（保持0..1范围内）
+            const intensity = Math.min(1, Math.max(0.05, Math.pow(2.512, -star.mag)));
+            colors[i * 3] = rgb.r * intensity;
+            colors[i * 3 + 1] = rgb.g * intensity;
+            colors[i * 3 + 2] = rgb.b * intensity;
+        }
+
+        starGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        starGeometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+
+        // 清空旧背景并添加新的点云
+        this.starField.clear();
+        const starMaterial = new THREE.PointsMaterial({
+            size: 1.6,
+            sizeAttenuation: true,
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.95
+        });
+
+        const starsPoints = new THREE.Points(starGeometry, starMaterial);
+        this.starField.add(starsPoints);
+        console.log('StarMapRenderer: 已使用真实星表创建星空背景');
+    }
+
+    /**
+     * 粗略的 B-V -> RGB 近似映射（0.0 ~ 1.5 常见主序星范围）
+     * 参考经验映射，非高保真，仅用于视觉近似
+     */
+    bvToRgb(bv) {
+        // 限制范围
+        const x = Math.max(-0.4, Math.min(2.0, bv));
+
+        // 蓝(负)到红(正)的分段插值
+        // 近似值：
+        // bv=-0.4 → 蓝白 (0.64, 0.79, 1.00)
+        // bv=0.0  → 白    (1.00, 1.00, 1.00)
+        // bv=0.65 → 黄白  (1.00, 0.94, 0.80)
+        // bv=1.5  → 橙红  (1.00, 0.75, 0.60)
+        const keys = [
+            { b: -0.4, c: [0.64, 0.79, 1.00] },
+            { b: 0.0,  c: [1.00, 1.00, 1.00] },
+            { b: 0.65, c: [1.00, 0.94, 0.80] },
+            { b: 1.5,  c: [1.00, 0.75, 0.60] }
+        ];
+
+        let c0 = keys[0], c1 = keys[keys.length - 1];
+        for (let i = 0; i < keys.length - 1; i++) {
+            if (x >= keys[i].b && x <= keys[i + 1].b) {
+                c0 = keys[i];
+                c1 = keys[i + 1];
+                break;
+            }
+        }
+
+        const t = (x - c0.b) / (c1.b - c0.b);
+        const r = c0.c[0] + (c1.c[0] - c0.c[0]) * t;
+        const g = c0.c[1] + (c1.c[1] - c0.c[1]) * t;
+        const b = c0.c[2] + (c1.c[2] - c0.c[2]) * t;
+        return { r, g, b };
     }
     
     /**
      * 设置星座数据
      */
     setConstellationData(constellationData) {
+        console.log('StarMapRenderer: 设置星座数据');
         this.constellationData = constellationData;
         this.createConstellations();
+        console.log('StarMapRenderer: 星座数据设置完成');
     }
     
     /**
      * 创建星座图案
      */
     createConstellations() {
-        if (!this.constellationData) return;
+        console.log('StarMapRenderer: 开始创建星座图案');
+        if (!this.constellationData) {
+            console.warn('StarMapRenderer: 星座数据为空，无法创建星座图案');
+            return;
+        }
         
         // 清除现有星座
         this.constellationGroup.clear();
+        console.log('StarMapRenderer: 已清除现有星座');
         
         const constellations = this.constellationData.getConstellations();
+        console.log(`StarMapRenderer: 准备创建${constellations.size}个星座`);
         
         for (const [key, constellation] of constellations) {
+            console.log(`StarMapRenderer: 创建星座 ${key}`);
             const constellationObject = new THREE.Group();
             
             // 创建星座中的恒星
@@ -215,6 +370,7 @@ export class StarMapRenderer {
             
             // 创建星座连线
             if (constellation.lines) {
+                console.log(`StarMapRenderer: 为星座 ${key} 创建${constellation.lines.length}条连线`);
                 constellation.lines.forEach(line => {
                     const startStar = constellation.stars[line[0]];
                     const endStar = constellation.stars[line[1]];
@@ -241,21 +397,26 @@ export class StarMapRenderer {
             constellationObject.visible = this.showConstellations;
             this.constellationGroup.add(constellationObject);
         }
+        console.log('StarMapRenderer: 星座图案创建完成');
     }
     
     /**
      * 更新行星位置
      */
     updatePlanetPositions(planetPositions) {
+        console.log('StarMapRenderer: 开始更新行星位置');
         // 清除现有行星
         this.planetGroup.clear();
         this.planetObjects.clear();
+        console.log('StarMapRenderer: 已清除现有行星');
         
+        let planetCount = 0;
         for (const [key, planet] of Object.entries(planetPositions)) {
             if (this.focusPlanet !== 'all' && this.focusPlanet !== key) {
                 continue; // 跳过不聚焦的行星
             }
             
+            console.log(`StarMapRenderer: 创建行星 ${key}`);
             // 创建行星几何体
             const planetGeometry = new THREE.SphereGeometry(this.planetScale, 16, 16);
             const planetMaterial = new THREE.MeshBasicMaterial({
@@ -295,13 +456,16 @@ export class StarMapRenderer {
             
             // 更新轨道轨迹
             this.updateOrbitTrail(key, planet.position);
+            planetCount++;
         }
+        console.log(`StarMapRenderer: 行星位置更新完成，共创建了${planetCount}个行星`);
     }
     
     /**
      * 创建文字精灵
      */
     createTextSprite(text, color) {
+        console.log(`StarMapRenderer: 创建文字精灵 "${text}"`);
         const canvas = document.createElement('canvas');
         const context = canvas.getContext('2d');
         canvas.width = 256;
@@ -324,6 +488,7 @@ export class StarMapRenderer {
      * 更新轨道轨迹
      */
     updateOrbitTrail(planetKey, position) {
+        console.log(`StarMapRenderer: 更新行星 ${planetKey} 的轨道轨迹`);
         if (!this.orbitTrails.has(planetKey)) {
             this.orbitTrails.set(planetKey, []);
         }
@@ -354,6 +519,7 @@ export class StarMapRenderer {
      * 创建黄道平面
      */
     createEcliptic() {
+        console.log('StarMapRenderer: 创建黄道平面');
         const eclipticGeometry = new THREE.RingGeometry(50, 800, 64);
         const eclipticMaterial = new THREE.MeshBasicMaterial({
             color: 0xffff00,
@@ -368,34 +534,40 @@ export class StarMapRenderer {
         
         this.scene.add(eclipticMesh);
         this.eclipticMesh = eclipticMesh;
+        console.log('StarMapRenderer: 黄道平面创建完成');
     }
     
     /**
      * 更新星空 (考虑地球自转和公转)
      */
     updateStarField(date) {
+        console.log('StarMapRenderer: 更新星空背景');
         // 简化：根据日期旋转整个星空
         const dayOfYear = this.getDayOfYear(date);
         const rotation = (dayOfYear / 365.25) * Math.PI * 2;
         
         this.starField.rotation.y = rotation;
         this.constellationGroup.rotation.y = rotation;
+        console.log(`StarMapRenderer: 星空背景更新完成，旋转角度: ${rotation}`);
     }
     
     /**
      * 设置显示选项
      */
     setConstellationsVisible(visible) {
+        console.log(`StarMapRenderer: 设置星座可见性为 ${visible}`);
         this.showConstellations = visible;
         this.constellationGroup.visible = visible;
     }
     
     setOrbitTrailsVisible(visible) {
+        console.log(`StarMapRenderer: 设置轨道轨迹可见性为 ${visible}`);
         this.showOrbitTrails = visible;
         this.orbitTrailsGroup.visible = visible;
     }
     
     setEclipticVisible(visible) {
+        console.log(`StarMapRenderer: 设置黄道平面可见性为 ${visible}`);
         this.showEcliptic = visible;
         if (this.eclipticMesh) {
             this.eclipticMesh.visible = visible;
@@ -403,6 +575,7 @@ export class StarMapRenderer {
     }
     
     setFocusPlanet(planet) {
+        console.log(`StarMapRenderer: 设置聚焦行星为 ${planet}`);
         this.focusPlanet = planet;
     }
     
@@ -410,6 +583,7 @@ export class StarMapRenderer {
      * 渲染循环
      */
     render() {
+        // 为了性能考虑，不在渲染循环中添加日志
         if (this.controls) {
             this.controls.update();
         }
@@ -421,6 +595,7 @@ export class StarMapRenderer {
      * 设置窗口resize处理
      */
     setupResizeHandler() {
+        console.log('StarMapRenderer: 设置窗口resize处理');
         window.addEventListener('resize', () => {
             this.camera.aspect = this.container.clientWidth / this.container.clientHeight;
             this.camera.updateProjectionMatrix();
@@ -441,6 +616,7 @@ export class StarMapRenderer {
      * 清理资源
      */
     dispose() {
+        console.log('StarMapRenderer: 开始清理资源');
         if (this.renderer) {
             this.container.removeChild(this.renderer.domElement);
             this.renderer.dispose();
@@ -449,5 +625,6 @@ export class StarMapRenderer {
         if (this.controls) {
             this.controls.dispose();
         }
+        console.log('StarMapRenderer: 资源清理完成');
     }
 }

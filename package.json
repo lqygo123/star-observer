@@ -9,13 +9,21 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "three": "^0.158.0",
-    "dat.gui": "^0.7.9"
+    "csvtojson": "^2.0.10",
+    "dat.gui": "^0.7.9",
+    "three": "^0.158.0"
   },
   "devDependencies": {
     "vite": "^4.5.0"
   },
-  "keywords": ["astronomy", "solar-system", "three.js", "starmap", "planets", "constellation"],
+  "keywords": [
+    "astronomy",
+    "solar-system",
+    "three.js",
+    "starmap",
+    "planets",
+    "constellation"
+  ],
   "author": "Your Name",
   "license": "MIT"
 }

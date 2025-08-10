@@ -70,6 +70,8 @@ class SolarSystemStarMap {
             
             // 开始渲染循环
             this.startRenderLoop();
+
+            this.mycustomModifycation();
             
         } catch (error) {
             console.error('初始化失败:', error);
@@ -77,6 +79,10 @@ class SolarSystemStarMap {
         }
     }
     
+    mycustomModifycation() {
+        console.log('mycustomModifycation');
+    }
+
     /**
      * 设置UI事件处理器
      */
