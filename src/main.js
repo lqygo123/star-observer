@@ -111,6 +111,14 @@ class SolarSystemStarMap {
             this.renderer.setFocusPlanet(planet);
         });
         
+        // 观察地点变化
+        this.uiController.on('observerChange', ({ lat, lon }) => {
+            this.renderer.setObserverLocation(lat, lon);
+            // 刷新一次姿态与渲染
+            const date = this.timeController.getCurrentDate();
+            this.updateStarMap(date);
+        });
+
         // 显示选项变化
         this.uiController.on('showConstellationsChange', (show) => {
             this.renderer.setConstellationsVisible(show);

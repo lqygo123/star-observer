@@ -220,6 +220,18 @@
             <h3 style="margin-bottom: 15px; color: #ffd700;">太阳系星图观测器</h3>
             
             <div class="control-group">
+                <label for="observer-location">观察地点:</label>
+                <select id="observer-location" style="width: 100%; padding: 5px; background: #222; color: #fff; border: 1px solid #555; margin-bottom: 10px;">
+                    <option value="guangzhou">广州 (23.1291°, 113.2644°)</option>
+                    <option value="beijing">北京 (39.9042°, 116.4074°)</option>
+                    <option value="shanghai">上海 (31.2304°, 121.4737°)</option>
+                    <option value="newyork">纽约 (40.7128°, -74.0060°)</option>
+                    <option value="sydney">悉尼 (-33.8688°, 151.2093°)</option>
+                    <option value="custom">自定义（待支持）</option>
+                </select>
+            </div>
+
+            <div class="control-group">
                 <label for="date-input">观测日期:</label>
                 <input type="date" id="date-input" value="2024-01-01">
             </div>

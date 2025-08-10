@@ -17,6 +17,7 @@ export class StarMapRenderer {
         this.controls = null;
         
         // 渲染对象组
+        this.skyGroup = null; // 天球整体分组
         this.starField = null;
         this.constellationGroup = null;
         this.planetGroup = null;
@@ -26,6 +27,8 @@ export class StarMapRenderer {
         this.constellationData = null;
         this.planetObjects = new Map();
         this.orbitTrails = new Map();
+        this.starCatalogRaw = null; // 原始星表（用于半球可见性过滤）
+        this.starPoints = null; // 背景恒星 Points 引用
         
         // 显示控制
         this.showConstellations = true;
@@ -36,6 +39,15 @@ export class StarMapRenderer {
         // 渲染参数
         this.celestialSphereRadius = 1000;
         this.planetScale = 2.0;
+
+        // 观测者参数（默认广州）
+        this.observer = {
+            latitudeDeg: 23.1291,
+            longitudeDeg: 113.2644
+        };
+
+        // 地平线裁剪平面
+        this.horizonPlane = null;
     }
     
     /**
@@ -63,6 +75,8 @@ export class StarMapRenderer {
         this.renderer.setSize(this.container.clientWidth, this.container.clientHeight);
         this.renderer.setPixelRatio(window.devicePixelRatio);
         this.container.appendChild(this.renderer.domElement);
+        // 启用局部裁剪（用于半球可见性）
+        this.renderer.localClippingEnabled = true;
         console.log('StarMapRenderer: 渲染器创建完成');
         
         // 创建轨道控制器
@@ -85,10 +99,10 @@ export class StarMapRenderer {
         this.createBrightStarLabels();
         console.log('StarMapRenderer: 重要亮星标注创建完成');
         
-        // 创建黄道平面
-        console.log('StarMapRenderer: 开始创建黄道平面');
+        // 创建黄道（投影为天球大圆）
+        console.log('StarMapRenderer: 开始创建黄道大圆');
         this.createEcliptic();
-        console.log('StarMapRenderer: 黄道平面创建完成');
+        console.log('StarMapRenderer: 黄道大圆创建完成');
         
         // 窗口resize处理
         this.setupResizeHandler();
@@ -122,15 +136,24 @@ export class StarMapRenderer {
      */
     createSceneGroups() {
         console.log('StarMapRenderer: 创建场景对象组');
+        // 顶层天球分组
+        this.skyGroup = new THREE.Group();
+        this.scene.add(this.skyGroup);
+
+        // 子分组
         this.starField = new THREE.Group();
         this.constellationGroup = new THREE.Group();
         this.planetGroup = new THREE.Group();
         this.orbitTrailsGroup = new THREE.Group();
-        
-        this.scene.add(this.starField);
-        this.scene.add(this.constellationGroup);
-        this.scene.add(this.planetGroup);
-        this.scene.add(this.orbitTrailsGroup);
+
+        this.skyGroup.add(this.starField);
+        this.skyGroup.add(this.constellationGroup);
+        this.skyGroup.add(this.planetGroup);
+        this.skyGroup.add(this.orbitTrailsGroup);
+
+        // 地平线裁剪平面：y>=0 可见（应用于所有材质）
+        this.horizonPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+        this.renderer.clippingPlanes = [this.horizonPlane];
         console.log('StarMapRenderer: 场景对象组添加到场景中');
     }
     
@@ -289,6 +312,7 @@ export class StarMapRenderer {
 
         const starsPoints = new THREE.Points(starGeometry, starMaterial);
         this.starField.add(starsPoints);
+        this.starPoints = starsPoints;
         console.log('StarMapRenderer: 已使用真实星表创建星空背景');
     }
 
@@ -507,15 +531,15 @@ export class StarMapRenderer {
             });
             
             const planetMesh = new THREE.Mesh(planetGeometry, planetMaterial);
-            planetMesh.position.set(planet.position.x, planet.position.y, planet.position.z);
+            // 将行星按赤经赤纬映射到天球表面
+            const raDeg = planet.celestialCoords.ra * 15.0;
+            const decDeg = planet.celestialCoords.dec;
+            const proj = ConstellationData.raDecToCartesian(raDeg, decDeg, this.celestialSphereRadius + 2);
+            planetMesh.position.set(proj.x, proj.y, proj.z);
             
             // 添加行星标签
             const labelSprite = this.createTextSprite(planet.name, planet.color);
-            labelSprite.position.set(
-                planet.position.x,
-                planet.position.y + 5,
-                planet.position.z
-            );
+            labelSprite.position.set(proj.x, proj.y + 5, proj.z);
             
             // 行星发光效果
             const glowGeometry = new THREE.SphereGeometry(this.planetScale * 1.5, 16, 16);
@@ -536,7 +560,7 @@ export class StarMapRenderer {
             this.planetObjects.set(key, planetGroup);
             
             // 更新轨道轨迹
-            this.updateOrbitTrail(key, planet.position);
+            this.updateOrbitTrail(key, { x: proj.x, y: proj.y, z: proj.z });
             planetCount++;
         }
         console.log(`StarMapRenderer: 行星位置更新完成，共创建了${planetCount}个行星`);
@@ -618,36 +642,36 @@ export class StarMapRenderer {
      * 创建黄道平面
      */
     createEcliptic() {
-        console.log('StarMapRenderer: 创建黄道平面');
-        const eclipticGeometry = new THREE.RingGeometry(50, 800, 64);
-        const eclipticMaterial = new THREE.MeshBasicMaterial({
-            color: 0xffff00,
-            transparent: true,
-            opacity: 0.1,
-            side: THREE.DoubleSide
-        });
-        
-        const eclipticMesh = new THREE.Mesh(eclipticGeometry, eclipticMaterial);
-        eclipticMesh.rotation.x = Math.PI / 2;
-        eclipticMesh.visible = this.showEcliptic;
-        
-        this.scene.add(eclipticMesh);
-        this.eclipticMesh = eclipticMesh;
-        console.log('StarMapRenderer: 黄道平面创建完成');
+        console.log('StarMapRenderer: 创建黄道大圆（映射到天球表面）');
+        const points = [];
+        const eps = THREE.MathUtils.degToRad(23.4367);
+        const radius = this.celestialSphereRadius;
+        for (let lambdaDeg = 0; lambdaDeg <= 360; lambdaDeg += 1) {
+            const lam = THREE.MathUtils.degToRad(lambdaDeg);
+            const sinDec = Math.sin(eps) * Math.sin(lam);
+            const dec = Math.asin(sinDec);
+            const yRA = Math.cos(eps) * Math.sin(lam);
+            const xRA = Math.cos(lam);
+            let ra = Math.atan2(yRA, xRA);
+            if (ra < 0) ra += Math.PI * 2;
+            const pos = ConstellationData.raDecToCartesian(THREE.MathUtils.radToDeg(ra), THREE.MathUtils.radToDeg(dec), radius);
+            points.push(new THREE.Vector3(pos.x, pos.y, pos.z));
+        }
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        const material = new THREE.LineBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.5 });
+        const eclipticLine = new THREE.LineLoop(geometry, material);
+        eclipticLine.visible = this.showEcliptic;
+        this.skyGroup.add(eclipticLine);
+        this.eclipticMesh = eclipticLine;
+        console.log('StarMapRenderer: 黄道大圆创建完成');
     }
     
     /**
      * 更新星空 (考虑地球自转和公转)
      */
     updateStarField(date) {
-        console.log('StarMapRenderer: 更新星空背景');
-        // 简化：根据日期旋转整个星空
-        const dayOfYear = this.getDayOfYear(date);
-        const rotation = (dayOfYear / 365.25) * Math.PI * 2;
-        
-        this.starField.rotation.y = rotation;
-        this.constellationGroup.rotation.y = rotation;
-        console.log(`StarMapRenderer: 星空背景更新完成，旋转角度: ${rotation}`);
+        console.log('StarMapRenderer: 更新星空背景（本地视角对齐）');
+        this.updateSkyOrientation(date);
     }
     
     /**
@@ -709,6 +733,49 @@ export class StarMapRenderer {
         const start = new Date(date.getFullYear(), 0, 0);
         const diff = date - start;
         return Math.floor(diff / (1000 * 60 * 60 * 24));
+    }
+    
+    /**
+     * 设置观测者地理位置
+     */
+    setObserverLocation(latitudeDeg, longitudeDeg) {
+        this.observer.latitudeDeg = latitudeDeg;
+        this.observer.longitudeDeg = longitudeDeg;
+    }
+
+    /**
+     * 根据本地恒星时与纬度，将 skyGroup 姿态对齐，使世界坐标 y 轴为当地天顶方向
+     */
+    updateSkyOrientation(date) {
+        const lstRad = this.computeLocalSiderealTimeRadians(date, this.observer.longitudeDeg);
+        const zenithRaDeg = THREE.MathUtils.radToDeg(lstRad);
+        const zenithDecDeg = this.observer.latitudeDeg;
+        const zenith = ConstellationData.raDecToCartesian(zenithRaDeg, zenithDecDeg, 1);
+        const zenithVec = new THREE.Vector3(zenith.x, zenith.y, zenith.z).normalize();
+
+        const up = new THREE.Vector3(0, 1, 0);
+        const q = new THREE.Quaternion().setFromUnitVectors(zenithVec, up);
+        this.skyGroup.setRotationFromQuaternion(q);
+    }
+
+    /**
+     * 计算儒略日
+     */
+    toJulianDate(date) {
+        return date.getTime() / 86400000 + 2440587.5;
+    }
+
+    /**
+     * 本地恒星时（弧度）
+     */
+    computeLocalSiderealTimeRadians(date, longitudeDeg) {
+        const jd = this.toJulianDate(date);
+        const T = (jd - 2451545.0) / 36525.0;
+        let GMST = 280.46061837 + 360.98564736629 * (jd - 2451545.0) + 0.000387933 * T * T - (T * T * T) / 38710000.0;
+        GMST = ((GMST % 360) + 360) % 360;
+        let LST = GMST + longitudeDeg;
+        LST = ((LST % 360) + 360) % 360;
+        return THREE.MathUtils.degToRad(LST);
     }
     
     /**

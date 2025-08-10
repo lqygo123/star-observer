@@ -10,6 +10,7 @@ export class UIController {
             timeSpeed: document.getElementById('time-speed'),
             speedValue: document.getElementById('speed-value'),
             planetFocus: document.getElementById('planet-focus'),
+            observerLocation: document.getElementById('observer-location'),
             playPause: document.getElementById('play-pause'),
             reset: document.getElementById('reset'),
             showConstellations: document.getElementById('show-constellations'),
@@ -57,6 +58,25 @@ export class UIController {
         if (this.elements.planetFocus) {
             this.elements.planetFocus.addEventListener('change', (event) => {
                 this.emit('planetFocusChange', event.target.value);
+            });
+        }
+
+        // 观察地点变化
+        if (this.elements.observerLocation) {
+            this.elements.observerLocation.addEventListener('change', (event) => {
+                const v = event.target.value;
+                const presets = {
+                    guangzhou: { lat: 23.1291, lon: 113.2644 },
+                    beijing: { lat: 39.9042, lon: 116.4074 },
+                    shanghai: { lat: 31.2304, lon: 121.4737 },
+                    newyork: { lat: 40.7128, lon: -74.0060 },
+                    sydney: { lat: -33.8688, lon: 151.2093 }
+                };
+                if (presets[v]) {
+                    this.emit('observerChange', presets[v]);
+                } else {
+                    this.emit('observerChangeRequestedCustom');
+                }
             });
         }
         
