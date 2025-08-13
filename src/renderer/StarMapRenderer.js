@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { ConstellationData } from '../data/ConstellationData.js';
+import { FPSMonitor } from '../utils/FPSMonitor.js';
 
 /**
  * 星图3D渲染器
@@ -48,6 +49,9 @@ export class StarMapRenderer {
 
         // 地平线裁剪平面
         this.horizonPlane = null;
+        
+        // FPS监控器
+        this.fpsMonitor = new FPSMonitor();
     }
     
     /**
@@ -784,6 +788,9 @@ export class StarMapRenderer {
      * 渲染循环
      */
     render() {
+        // 开始FPS监控
+        this.fpsMonitor.beginRender();
+        
         // 为了性能考虑，不在渲染循环中添加日志
         if (this.controls) {
             this.controls.update();
@@ -793,6 +800,9 @@ export class StarMapRenderer {
         this.updateConstellationAnimations();
         
         this.renderer.render(this.scene, this.camera);
+        
+        // 结束FPS监控
+        this.fpsMonitor.endRender();
     }
     
     /**
@@ -899,6 +909,12 @@ export class StarMapRenderer {
         if (this.controls) {
             this.controls.dispose();
         }
+        
+        // 重置FPS监控器
+        if (this.fpsMonitor) {
+            this.fpsMonitor.reset();
+        }
+        
         console.log('StarMapRenderer: 资源清理完成');
     }
 }
